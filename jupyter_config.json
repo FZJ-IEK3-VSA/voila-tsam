@@ -1,0 +1,7 @@
+
+{
+  "VoilaConfiguration": {
+    "template": "fzj-template",
+    "enable_nbextensions": true
+  }
+}
