@@ -2,59 +2,25 @@ import sys
 import os
 from setuptools import setup, find_packages
 from setuptools.command.develop import develop
-import contextlib
+
+try:
+    import jupyter_core.paths as jupyter_core_paths
+except:
+    jupyter_core_paths = None
+
 
 pjoin = os.path.join
 
 
-
-# these are based on jupyter_core.paths
-def jupyter_config_dir():
-    """Get the Jupyter config directory for this platform and user.
-    Returns JUPYTER_CONFIG_DIR if defined, else ~/.jupyter
-    """
-
-    env = os.environ
-    home_dir = get_home_dir()
-
-    if env.get('JUPYTER_NO_CONFIG'):
-        return _mkdtemp_once('jupyter-clean-cfg')
-
-    if env.get('JUPYTER_CONFIG_DIR'):
-        return env['JUPYTER_CONFIG_DIR']
-
-    return pjoin(home_dir, '.jupyter')
-
-
-def user_dir():
-    homedir = os.path.expanduser('~')
-    # Next line will make things work even when /home/ is a symlink to
-    # /usr/home as it is on FreeBSD, for example
-    homedir = os.path.realpath(homedir)
-    if sys.platform == 'darwin':
-        return os.path.join(homedir, 'Library', 'Jupyter')
-    elif os.name == 'nt':
-        appdata = os.environ.get('APPDATA', None)
-        if appdata:
-            return os.path.join(appdata, 'jupyter')
-        else:
-            return os.path.join(jupyter_config_dir(), 'data')
-    else:
-        # Linux, non-OS X Unix, AIX, etc.
-        xdg = env.get("XDG_DATA_HOME", None)
-        if not xdg:
-            xdg = pjoin(home, '.local', 'share')
-        return pjoin(xdg, 'jupyter')
-
-
 class DevelopCmd(develop):
     prefix_targets = [
-        ("voila/templates", 'fzj-template')
+        ("nbconvert/templates", 'fzj-template'),
+        ("voila/templates", 'fzj-template'),
     ]
     def run(self):
         target_dir = os.path.join(sys.prefix, 'share', 'jupyter')
         if '--user' in sys.prefix:  # TODO: is there a better way to find out?
-            target_dir = user_dir()
+            target_dir = jupyter_core_paths.user_dir()
         target_dir = os.path.join(target_dir)
 
         for prefix_target, name in self.prefix_targets:
@@ -74,13 +40,10 @@ class DevelopCmd(develop):
         super(DevelopCmd, self).run()
 
 
-# WARNING: all files generates during setup.py will not end up in the source distribution
 data_files = []
-# Add all the templates
-for (dirpath, dirnames, filenames) in os.walk('share/jupyter/voila/templates/'):
-    if filenames:
-        data_files.append((dirpath, [os.path.join(dirpath, filename) for filename in filenames]))
-
+for root, dirs, files in os.walk('share'):
+    root_files = [os.path.join(root, i) for i in files]
+    data_files.append((root, root_files))
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 with open( os.path.join(dir_path,'requirements.txt') ) as f:
